@@ -55,6 +55,87 @@
     font-size: 14px;
     margin-left: auto;
   }
+  .cart-btn {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 16px;
+    border: 1px solid var(--grey-line);
+    background: var(--white);
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--black);
+    transition: all 0.15s;
+  }
+  .cart-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .cart-btn svg { width: 18px; height: 18px; }
+  .cart-count {
+    min-width: 20px; height: 20px; padding: 0 6px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--blue); color: var(--white);
+    border-radius: 999px; font-size: 12px; font-weight: 600;
+  }
+  .cart-btn.bump { animation: cartBump 0.3s ease; }
+  @keyframes cartBump {
+    0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); }
+  }
+
+  .product-modal {
+    display: none;
+    position: fixed; inset: 0; z-index: 1100;
+    background: rgba(0,0,0,0.55);
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .product-modal.show { display: flex; }
+  .product-card {
+    background: var(--white);
+    border-radius: 20px;
+    max-width: 760px; width: 100%;
+    max-height: 90vh; overflow: hidden;
+    display: grid; grid-template-columns: 1fr 1fr;
+    position: relative;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.35);
+  }
+  .product-close {
+    position: absolute; top: 12px; right: 14px; z-index: 2;
+    width: 36px; height: 36px;
+    border: none; background: rgba(255,255,255,0.9);
+    border-radius: 50%; cursor: pointer;
+    font-size: 24px; line-height: 1; color: var(--grey-text);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .product-close:hover { color: var(--black); }
+  .product-media {
+    background: var(--grey-bg);
+    display: flex; align-items: center; justify-content: center;
+    min-height: 320px;
+  }
+  .product-media img { width: 100%; height: 100%; max-height: 90vh; object-fit: cover; }
+  .product-info {
+    padding: 32px 28px;
+    display: flex; flex-direction: column;
+  }
+  .pm-category { color: var(--grey-text); font-size: 13px; text-transform: lowercase; margin-bottom: 8px; }
+  .pm-name { font-size: 22px; font-weight: 600; line-height: 1.25; margin-bottom: 16px; }
+  .pm-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+  .pm-tags .tag-badge {
+    font-size: 12px; padding: 4px 10px;
+    background: var(--grey-bg); border-radius: 999px; color: var(--grey-text);
+  }
+  .pm-price { font-size: 26px; font-weight: 700; margin-top: auto; margin-bottom: 20px; }
+  .pm-add {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 15px 20px;
+    background: var(--blue); color: var(--white);
+    border: none; border-radius: 12px;
+    font-family: inherit; font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .pm-add svg { width: 20px; height: 20px; }
+  .pm-add:hover { background: var(--blue-dark); }
+  .pm-add.added { background: #2c7a4b; }
 
   main { padding: 40px 0 80px; }
 
@@ -295,7 +376,12 @@
   @media (max-width: 600px) {
     .hero h2 { font-size: 24px; }
     header .sub { display: none; }
+    .cart-btn span:not(.cart-count) { display: none; }
     .uploader { padding: 40px 16px; }
+    .product-card { grid-template-columns: 1fr; max-height: 92vh; overflow-y: auto; }
+    .product-media { min-height: 220px; }
+    .product-media img { max-height: 40vh; }
+    .pm-info, .product-info { padding: 20px; }
   }
 </style>
 </head>
@@ -303,7 +389,14 @@
 <header>
   <div class="container">
     <h1>Поиск по фото</h1>
-    <span class="sub">MVP</span>
+    <button class="cart-btn" id="cartBtn" aria-label="Корзина">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+      </svg>
+      <span>Корзина</span>
+      <span class="cart-count" id="cartCount">0</span>
+    </button>
   </div>
 </header>
 
@@ -358,6 +451,28 @@
 
 <div class="lightbox" id="lightbox">
   <img id="lightboxImg" alt="Увеличенное фото">
+</div>
+
+<div class="product-modal" id="productModal">
+  <div class="product-card" role="dialog" aria-modal="true">
+    <button class="product-close" id="productClose" aria-label="Закрыть">&times;</button>
+    <div class="product-media">
+      <img id="pmImg" alt="">
+    </div>
+    <div class="product-info">
+      <span class="pm-category" id="pmCategory"></span>
+      <h3 class="pm-name" id="pmName"></h3>
+      <div class="pm-tags" id="pmTags"></div>
+      <div class="pm-price" id="pmPrice"></div>
+      <button class="pm-add" id="pmAdd">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+        </svg>
+        <span>Добавить в корзину</span>
+      </button>
+    </div>
+  </div>
 </div>
 
 <script type="module">
@@ -636,9 +751,11 @@ function renderTagBadges(p) {
   return `<div class="tag-row">${show.map(t => `<span class="tag-badge">${t}</span>`).join('')}</div>`;
 }
 
+let lastRendered = [];
 function render(items) {
-  results.innerHTML = items.map(p => `
-    <a class="card" href="#" onclick="return false">
+  lastRendered = items;
+  results.innerHTML = items.map((p, i) => `
+    <a class="card" href="#" onclick="return false" data-idx="${i}">
       <div class="img-wrap">
         <img src="${proxyImg(p.image)}" alt="${p.name}" referrerpolicy="no-referrer" onerror="this.style.display='none'">
         <div class="score">${Math.round(p.score * 100)}%</div>
@@ -703,7 +820,68 @@ queryImg.addEventListener('click', () => {
 });
 lightbox.addEventListener('click', () => lightbox.classList.remove('show'));
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') lightbox.classList.remove('show');
+  if (e.key === 'Escape') { lightbox.classList.remove('show'); closeProduct(); }
+});
+
+// --- Карточка товара + корзина ---
+const productModal = $('productModal'), cartBtn = $('cartBtn'), cartCount = $('cartCount');
+let cart = [];
+let currentProduct = null;
+
+function priceText(p) {
+  return typeof p.price === 'number'
+    ? p.price.toLocaleString('ru-RU') + ' ₽'
+    : (p.price ? Number(p.price).toLocaleString('ru-RU') + ' ₽' : '');
+}
+
+function openProduct(p) {
+  currentProduct = p;
+  const img = $('pmImg');
+  if (p.image) { img.src = proxyImg(p.image); img.style.display = 'block'; }
+  else { img.removeAttribute('src'); img.style.display = 'none'; }
+  $('pmCategory').textContent = p.category || '';
+  $('pmName').textContent = p.name || '';
+  $('pmTags').innerHTML = renderTagBadges(p);
+  $('pmPrice').textContent = priceText(p);
+  const addBtn = $('pmAdd');
+  addBtn.classList.remove('added');
+  addBtn.querySelector('span').textContent = 'Добавить в корзину';
+  productModal.classList.add('show');
+}
+function closeProduct() { productModal.classList.remove('show'); }
+
+// клик по карточке в результатах открывает превью
+results.addEventListener('click', (e) => {
+  const card = e.target.closest('.card');
+  if (!card) return;
+  e.preventDefault();
+  const idx = Number(card.dataset.idx);
+  if (lastRendered[idx]) openProduct(lastRendered[idx]);
+});
+
+// увеличить фото в карточке товара по клику
+$('pmImg').addEventListener('click', () => {
+  if (!$('pmImg').src) return;
+  lightboxImg.src = $('pmImg').src;
+  lightbox.classList.add('show');
+});
+
+$('pmAdd').addEventListener('click', () => {
+  if (!currentProduct) return;
+  cart.push(currentProduct);
+  cartCount.textContent = cart.length;
+  cartBtn.classList.remove('bump'); void cartBtn.offsetWidth; cartBtn.classList.add('bump');
+  const addBtn = $('pmAdd');
+  addBtn.classList.add('added');
+  addBtn.querySelector('span').textContent = 'Добавлено ✓';
+});
+
+$('productClose').addEventListener('click', closeProduct);
+productModal.addEventListener('click', (e) => { if (e.target === productModal) closeProduct(); });
+cartBtn.addEventListener('click', () => {
+  if (!cart.length) { alert('Корзина пуста'); return; }
+  const sum = cart.reduce((s, p) => s + (Number(p.price) || 0), 0);
+  alert('В корзине ' + cart.length + ' товаров на ' + sum.toLocaleString('ru-RU') + ' ₽');
 });
 
 readyPromise = init();
