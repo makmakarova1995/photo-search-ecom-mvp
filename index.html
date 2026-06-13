@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<title>Поиск мебели по фото</title>
+<style>
+  @font-face {
+    font-family: 'ALS Sirius';
+    src: url('fonts/ALS_Sirius_VF.ttf') format('truetype-variations');
+    font-weight: 100 900;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'ALS Sirius';
+    src: url('fonts/ALS_Sirius_Medium_1.6.otf') format('opentype');
+    font-weight: 500;
+    font-display: swap;
+  }
+
+  :root {
+    --purple: #7965AA;
+    --lavender: #9999FF;
+    --blue: #4DABE2;
+    --blue-dark: #2D8FC7;
+    --black: #000;
+    --white: #fff;
+    --grey-bg: #f4f4f4;
+    --grey-line: #e6e6e6;
+    --grey-text: #777;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    font-family: 'ALS Sirius', system-ui, sans-serif;
+    color: var(--black);
+    background: var(--white);
+    line-height: 1.4;
+  }
+  img { max-width: 100%; display: block; }
+  a { color: inherit; text-decoration: none; }
+
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+
+  header {
+    border-bottom: 1px solid var(--grey-line);
+    background: var(--white);
+    padding: 18px 0;
+  }
+  header .container {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  header img.logo { height: 32px; width: auto; }
+  header h1 {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--blue);
+    letter-spacing: -0.2px;
+  }
+  header .sub {
+    color: var(--grey-text);
+    font-size: 14px;
+    margin-left: auto;
+  }
+
+  main { padding: 40px 0 80px; }
+
+  .hero {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .hero h2 {
+    font-size: 32px;
+    font-weight: 500;
+    color: var(--blue);
+    margin-bottom: 10px;
+    letter-spacing: -0.5px;
+  }
+  .hero p {
+    color: var(--grey-text);
+    font-size: 16px;
+  }
+
+  .uploader {
+    border: 2px dashed var(--blue);
+    border-radius: 20px;
+    padding: 60px 20px;
+    text-align: center;
+    background: var(--white);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: block;
+  }
+  .uploader:hover, .uploader.drag {
+    background: rgba(77,171,226,0.05);
+    border-color: var(--blue-dark);
+  }
+  .uploader .icon {
+    width: 48px; height: 48px; margin: 0 auto 16px;
+    border-radius: 50%;
+    background: var(--blue);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .uploader .icon svg { width: 24px; height: 24px; }
+  .uploader h3 {
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--black);
+    margin-bottom: 6px;
+  }
+  .uploader p { color: var(--grey-text); font-size: 14px; }
+  .uploader input { display: none; }
+
+  .status {
+    margin-top: 20px;
+    padding: 16px 20px;
+    background: var(--grey-bg);
+    border-radius: 12px;
+    font-size: 14px;
+    color: var(--black);
+    display: none;
+  }
+  .status.show { display: block; }
+  .status .bar {
+    height: 4px; background: var(--grey-line); border-radius: 2px; margin-top: 10px; overflow: hidden;
+  }
+  .status .bar div {
+    height: 100%; background: var(--blue); width: 0%; transition: width 0.3s;
+  }
+
+  .filters {
+    margin-top: 28px;
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .filters.show { display: flex; }
+  .filters .label {
+    font-size: 14px; color: var(--grey-text); margin-right: 6px;
+  }
+  .chip {
+    padding: 8px 16px;
+    border: 1px solid var(--grey-line);
+    background: var(--white);
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 14px;
+    user-select: none;
+    transition: all 0.15s;
+    font-family: inherit;
+    color: var(--black);
+  }
+  .chip:hover { border-color: var(--blue); color: var(--blue); }
+  .chip.active {
+    background: var(--blue); color: var(--white); border-color: var(--blue);
+  }
+
+  .query-preview {
+    margin-top: 28px;
+    display: none;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: var(--grey-bg);
+    border-radius: 14px;
+  }
+  .query-preview.show { display: flex; }
+  .query-preview img { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; cursor: zoom-in; }
+
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.8);
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    cursor: zoom-out;
+  }
+  .lightbox.show { display: flex; }
+  .lightbox img {
+    max-width: 92vw;
+    max-height: 92vh;
+    border-radius: 12px;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+  }
+  .query-preview .info b {
+    display: block; margin-bottom: 4px;
+    color: var(--blue); font-weight: 500; font-size: 15px;
+  }
+  .query-preview .info span { color: var(--grey-text); font-size: 13px; }
+  .query-preview button {
+    margin-left: auto;
+    padding: 9px 18px;
+    border: 1px solid var(--blue);
+    background: var(--white);
+    color: var(--blue);
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .query-preview button:hover { background: var(--blue); color: var(--white); }
+
+  .results {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+  }
+  .card {
+    background: var(--white);
+    border: 1px solid var(--grey-line);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: all 0.15s;
+    text-decoration: none;
+    color: inherit;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(77,171,226,0.15);
+    border-color: var(--blue);
+  }
+  .card .img-wrap {
+    aspect-ratio: 1; background: var(--grey-bg); position: relative;
+  }
+  .card img { width: 100%; height: 100%; object-fit: cover; }
+  .card .score {
+    position: absolute; top: 10px; right: 10px;
+    background: var(--blue); color: var(--white);
+    padding: 5px 10px;
+    border-radius: 999px; font-size: 11px; font-weight: 500;
+  }
+  .card .body { padding: 14px 16px; }
+  .card .name {
+    font-size: 14px; font-weight: 500; margin-bottom: 8px;
+    color: var(--black);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card .meta { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+  .card .category { color: var(--grey-text); text-transform: lowercase; }
+  .card .price { color: var(--black); font-weight: 500; }
+
+  .tag-filters {
+    margin-top: 12px;
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .tag-filters.show { display: flex; }
+  .tag-filters .label { font-size: 13px; color: var(--grey-text); margin-right: 4px; }
+  .chip.tag-chip { font-size: 13px; padding: 6px 12px; }
+  .chip.tag-chip.active { background: var(--purple); border-color: var(--purple); }
+
+  .refine-row {
+    margin-top: 16px;
+    display: none;
+    gap: 8px;
+    align-items: center;
+  }
+  .refine-row.show { display: flex; }
+  .refine-row input {
+    flex: 1;
+    padding: 10px 16px;
+    border: 1px solid var(--grey-line);
+    border-radius: 999px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .refine-row input:focus { border-color: var(--blue); }
+  .refine-row button {
+    padding: 10px 20px;
+    background: var(--blue);
+    color: var(--white);
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .refine-row button:hover { background: var(--blue-dark); }
+
+  .card .tag-row {
+    display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;
+  }
+  .card .tag-badge {
+    font-size: 11px; padding: 2px 8px;
+    background: var(--grey-bg); border-radius: 999px;
+    color: var(--grey-text);
+  }
+
+  @media (max-width: 600px) {
+    .hero h2 { font-size: 24px; }
+    header .sub { display: none; }
+    .uploader { padding: 40px 16px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="container">
+    <h1>Поиск по фото</h1>
+    <span class="sub">MVP</span>
+  </div>
+</header>
+
+<main>
+  <div class="container">
+    <div class="hero">
+      <h2>Найдите похожую мебель по фото</h2>
+      <p>Загрузите фото интерьера — мы покажем похожие товары из каталога</p>
+    </div>
+
+    <div class="uploader" id="uploader">
+      <div class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <h3>Загрузите фото</h3>
+      <p>Перетащите сюда или нажмите для выбора</p>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+    <div class="status" id="status">
+      <div id="statusText">Готовлю модель…</div>
+      <div class="bar"><div id="statusBar"></div></div>
+    </div>
+
+    <div class="filters" id="filters">
+      <span class="label">Категория:</span>
+    </div>
+
+    <div class="tag-filters" id="tagFilters"></div>
+
+    <div class="refine-row" id="refineRow">
+      <input type="text" id="refineInput" placeholder="Уточните поиск: белый, скандинавский, с ящиками…">
+      <button id="refineBtn">Найти</button>
+    </div>
+
+    <div class="query-preview" id="queryPreview">
+      <img id="queryImg" alt="">
+      <div class="info">
+        <b>Ваше фото</b>
+        <span id="queryInfo">Поиск…</span>
+      </div>
+      <button onclick="reset()">Загрузить другое</button>
+    </div>
+
+    <div class="results" id="results"></div>
+  </div>
+</main>
+
+<div class="lightbox" id="lightbox">
+  <img id="lightboxImg" alt="Увеличенное фото">
+</div>
+
+<script type="module">
+import { env, AutoProcessor, RawImage, AutoTokenizer, CLIPVisionModelWithProjection, CLIPTextModelWithProjection }
+  from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+
+env.allowLocalModels = false;
+
+const $ = (id) => document.getElementById(id);
+const status = $('status'), statusText = $('statusText'), statusBar = $('statusBar');
+const uploader = $('uploader'), fileInput = $('fileInput');
+const queryPreview = $('queryPreview'), queryImg = $('queryImg'), queryInfo = $('queryInfo');
+const results = $('results');
+const filtersEl = $('filters');
+
+let processor = null, visionModel = null, textModel = null, tokenizer = null, catalog = null;
+let readyPromise = null;  // промис инициализации модели — search() ждет его
+let categoryEmbeds = null;
+let activeCategory = null;
+let lastQueryVec = null;
+let lastTextVec = null;
+let autoDetected = null;
+let activeTags = {};  // { fieldName: value }
+
+const TAG_FIELDS = {
+  'кровать':          [['color','Цвет'],['style','Стиль'],['material','Материал'],['has_mirror','Зеркало']],
+  'диван':            [['color','Цвет'],['style','Стиль'],['material','Материал'],['upholstery','Обивка']],
+  'кресло':           [['color','Цвет'],['style','Стиль'],['upholstery','Обивка']],
+  'комод':            [['color','Цвет'],['style','Стиль'],['material','Материал'],['has_mirror','Зеркало'],['has_drawers','Ящики']],
+  'шкаф':             [['color','Цвет'],['style','Стиль'],['material','Материал'],['has_mirror','Зеркало']],
+  'кухня':            [['color','Цвет'],['style','Стиль'],['material','Материал'],['kitchen_layout','Планировка']],
+  'обеденный стол':   [['color','Цвет'],['style','Стиль'],['material','Материал'],['shape','Форма']],
+  'письменный стол':  [['color','Цвет'],['style','Стиль'],['material','Материал']],
+  'стул':             [['color','Цвет'],['style','Стиль'],['upholstery','Обивка']],
+};
+
+const TAG_LABELS = {
+  color: { white:'белый', black:'черный', gray:'серый', beige:'бежевый', brown:'коричневый', wood:'дерево', blue:'синий', green:'зеленый', pink:'розовый', red:'красный', yellow:'желтый', mixed:'смешанный' },
+  style: { modern:'современный', classic:'классика', loft:'лофт', scandinavian:'скандинавский', minimalist:'минимализм' },
+  material: { LDSP:'ЛДСП', MDF:'МДФ', fabric:'ткань', velour:'велюр', leather:'кожа', eco_leather:'экокожа', wood:'дерево', metal:'металл', mixed:'смешанный' },
+  upholstery: { velour:'велюр', fabric:'ткань', leather:'кожа', eco_leather:'экокожа' },
+  shape: { round:'круглый', rectangle:'прямоугольный', square:'квадратный', oval:'овальный' },
+  kitchen_layout: { 'L-shaped':'угловая', linear:'прямая', 'U-shaped':'П-образная' },
+  has_mirror: { true:'есть зеркало' },
+  has_drawers: { true:'есть ящики' },
+};
+
+const CATEGORY_PROMPTS = {
+  'кровать': 'a photo of a bed',
+  'диван': 'a photo of a sofa or couch',
+  'комод': 'a photo of a dresser or chest of drawers',
+  'кухня': 'a photo of a kitchen with cabinets',
+  'кресло': 'a photo of an armchair',
+  'стул': 'a photo of a chair',
+  'шкаф': 'a photo of a wardrobe or closet',
+  'обеденный стол': 'a photo of a dining table',
+  'письменный стол': 'a photo of a desk or office table',
+};
+
+function showStatus(text, pct) {
+  status.classList.add('show');
+  statusText.textContent = text;
+  statusBar.style.width = (pct ?? 0) + '%';
+}
+function hideStatus() { status.classList.remove('show'); }
+
+async function init() {
+  try {
+    showStatus('Загружаю каталог…', 5);
+    const r = await fetch('catalog.json');
+    catalog = await r.json();
+    buildFilters();
+
+    showStatus('Загружаю модель CLIP (50 МБ, кэшируется)…', 10);
+    const modelId = 'Xenova/clip-vit-base-patch32';
+    processor = await AutoProcessor.from_pretrained(modelId);
+    tokenizer = await AutoTokenizer.from_pretrained(modelId);
+    visionModel = await CLIPVisionModelWithProjection.from_pretrained(modelId, {
+      progress_callback: (d) => {
+        if (d.status === 'progress') {
+          showStatus(`Загружаю модель… ${Math.round(d.progress * 0.5)}%`, 10 + d.progress * 0.4);
+        }
+      }
+    });
+    textModel = await CLIPTextModelWithProjection.from_pretrained(modelId, {
+      progress_callback: (d) => {
+        if (d.status === 'progress') {
+          showStatus(`Загружаю текстовую модель… ${Math.round(d.progress)}%`, 50 + d.progress * 0.45);
+        }
+      }
+    });
+    await prebuildCategoryEmbeds();
+    showStatus(`Готово. ${catalog.length} товаров в каталоге.`, 100);
+    setTimeout(hideStatus, 1500);
+  } catch (e) {
+    showStatus('Ошибка: ' + e.message, 0);
+  }
+}
+
+function buildFilters() {
+  const cats = [...new Set(catalog.map(p => p.category))];
+  const allChip = document.createElement('span');
+  allChip.className = 'chip active';
+  allChip.textContent = 'Все';
+  allChip.dataset.cat = '';
+  filtersEl.appendChild(allChip);
+  cats.forEach(c => {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.textContent = c;
+    chip.dataset.cat = c;
+    filtersEl.appendChild(chip);
+  });
+  filtersEl.addEventListener('click', (e) => {
+    if (!e.target.classList.contains('chip')) return;
+    filtersEl.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    e.target.classList.add('active');
+    activeCategory = e.target.dataset.cat || null;
+    if (lastQueryVec) rerank();
+  });
+  filtersEl.classList.add('show');
+}
+
+function tagBoost(p) {
+  if (!p.tags) return 0;
+  let boost = 0;
+  for (const [field, val] of Object.entries(activeTags)) {
+    const pval = p.tags[field];
+    if (val === 'true') { if (pval === true) boost += 0.06; }
+    else { if (String(pval) === String(val)) boost += 0.06; }
+  }
+  return boost;
+}
+
+function rerank() {
+  const pool = activeCategory ? catalog.filter(p => p.category === activeCategory) : catalog;
+  const baseVec = lastTextVec || lastQueryVec;
+  const scored = pool.map(p => {
+    let dot = 0;
+    for (let i = 0; i < baseVec.length; i++) dot += baseVec[i] * p.vector[i];
+    if (lastTextVec && lastQueryVec) {
+      let imgDot = 0;
+      for (let i = 0; i < lastQueryVec.length; i++) imgDot += lastQueryVec[i] * p.vector[i];
+      dot = 0.6 * dot + 0.4 * imgDot;
+    }
+    return { ...p, score: dot + tagBoost(p) };
+  }).sort((a, b) => b.score - a.score).slice(0, 12);
+  let info = `Найдено ${scored.length} похожих товаров`;
+  if (activeCategory) info += ` в категории «${activeCategory}»`;
+  if (autoDetected && autoDetected.cat === activeCategory) {
+    info += ` · автоопределено (${Math.round(autoDetected.prob * 100)}%)`;
+  }
+  queryInfo.textContent = info;
+  buildTagFilters(activeCategory);
+  render(scored);
+}
+
+function buildTagFilters(cat) {
+  const tagFiltersEl = $('tagFilters');
+  tagFiltersEl.innerHTML = '';
+  const fields = TAG_FIELDS[cat] || [];
+  if (!fields.length) { tagFiltersEl.classList.remove('show'); return; }
+
+  const pool = activeCategory ? catalog.filter(p => p.category === activeCategory) : catalog;
+
+  fields.forEach(([field, label]) => {
+    const vals = [...new Set(pool.map(p => p.tags && p.tags[field]).filter(v => v != null && v !== false && v !== ''))];
+    if (!vals.length) return;
+    const groupEl = document.createElement('div');
+    groupEl.style.display='flex'; groupEl.style.alignItems='center'; groupEl.style.gap='6px'; groupEl.style.flexWrap='wrap';
+    const lbl = document.createElement('span');
+    lbl.className = 'label'; lbl.textContent = label + ':';
+    groupEl.appendChild(lbl);
+    vals.forEach(v => {
+      const chip = document.createElement('span');
+      chip.className = 'chip tag-chip';
+      const vStr = String(v);
+      chip.textContent = (TAG_LABELS[field] && TAG_LABELS[field][vStr]) || vStr;
+      chip.dataset.field = field;
+      chip.dataset.val = vStr;
+      if (activeTags[field] === vStr) chip.classList.add('active');
+      chip.addEventListener('click', () => {
+        if (activeTags[field] === vStr) { delete activeTags[field]; chip.classList.remove('active'); }
+        else {
+          tagFiltersEl.querySelectorAll(`.tag-chip[data-field="${field}"]`).forEach(c => c.classList.remove('active'));
+          activeTags[field] = vStr; chip.classList.add('active');
+        }
+        rerank();
+      });
+      groupEl.appendChild(chip);
+    });
+    tagFiltersEl.appendChild(groupEl);
+  });
+  tagFiltersEl.classList.add('show');
+  $('refineRow').classList.add('show');
+}
+
+async function prebuildCategoryEmbeds() {
+  const cats = Object.keys(CATEGORY_PROMPTS);
+  const prompts = cats.map(c => CATEGORY_PROMPTS[c]);
+  const textInputs = tokenizer(prompts, { padding: true, truncation: true });
+  const { text_embeds } = await textModel(textInputs);
+  const dim = text_embeds.dims[1];
+  const data = text_embeds.data;
+  categoryEmbeds = cats.map((c, i) => {
+    const v = Array.from(data.slice(i * dim, (i + 1) * dim));
+    const n = Math.sqrt(v.reduce((s, x) => s + x * x, 0));
+    return { cat: c, vec: v.map(x => x / n) };
+  });
+}
+
+function detectCategory(imageEmbedNorm) {
+  const scores = categoryEmbeds.map(({ cat, vec }) => {
+    let dot = 0;
+    for (let j = 0; j < vec.length; j++) dot += imageEmbedNorm[j] * vec[j];
+    return { cat, score: dot };
+  }).sort((a, b) => b.score - a.score);
+  const sum = scores.reduce((s, x) => s + Math.exp(x.score * 100), 0);
+  scores.forEach(s => { s.prob = Math.exp(s.score * 100) / sum; });
+  return scores;
+}
+
+async function search(file) {
+  const url = URL.createObjectURL(file);
+  queryImg.src = url;
+  queryPreview.classList.add('show');
+  results.innerHTML = '';
+
+  // Если модель еще догружается (~50 МБ при первом запуске) — дождемся ее,
+  // а не падаем с «visionModel is not a function».
+  if (!visionModel) {
+    queryInfo.textContent = 'Дождитесь загрузки модели…';
+    try { await readyPromise; } catch (e) {}
+    if (!visionModel) {
+      queryInfo.textContent = 'Модель не загрузилась — обновите страницу (Cmd+Shift+R).';
+      return;
+    }
+  }
+  queryInfo.textContent = 'Анализирую фото…';
+
+  try {
+    const image = await RawImage.fromURL(url);
+    const visionInputs = await processor(image);
+    const { image_embeds } = await visionModel(visionInputs);
+    const queryVec = Array.from(image_embeds.data);
+    const norm = Math.sqrt(queryVec.reduce((s, x) => s + x * x, 0));
+    lastQueryVec = queryVec.map(x => x / norm);
+
+    const detection = detectCategory(lastQueryVec);
+    autoDetected = detection[0];
+    activeCategory = autoDetected.cat;
+    filtersEl.querySelectorAll('.chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.cat === activeCategory);
+    });
+    rerank();
+  } catch (e) {
+    queryInfo.textContent = 'Ошибка: ' + e.message;
+    console.error(e);
+  }
+}
+
+function proxyImg(url) {
+  if (!url || !url.startsWith('http')) return url;
+  return 'https://images.weserv.nl/?url=' + encodeURIComponent(url.replace(/^https?:\/\//, ''));
+}
+
+function renderTagBadges(p) {
+  if (!p.tags) return '';
+  const show = [];
+  if (p.tags.color) show.push((TAG_LABELS.color && TAG_LABELS.color[p.tags.color]) || p.tags.color);
+  if (p.tags.style) show.push((TAG_LABELS.style && TAG_LABELS.style[p.tags.style]) || p.tags.style);
+  if (p.tags.kitchen_layout) show.push((TAG_LABELS.kitchen_layout && TAG_LABELS.kitchen_layout[p.tags.kitchen_layout]) || p.tags.kitchen_layout);
+  if (p.tags.shape) show.push((TAG_LABELS.shape && TAG_LABELS.shape[p.tags.shape]) || p.tags.shape);
+  if (p.tags.has_mirror === true) show.push('с зеркалом');
+  if (!show.length) return '';
+  return `<div class="tag-row">${show.map(t => `<span class="tag-badge">${t}</span>`).join('')}</div>`;
+}
+
+function render(items) {
+  results.innerHTML = items.map(p => `
+    <a class="card" href="#" onclick="return false">
+      <div class="img-wrap">
+        <img src="${proxyImg(p.image)}" alt="${p.name}" referrerpolicy="no-referrer" onerror="this.style.display='none'">
+        <div class="score">${Math.round(p.score * 100)}%</div>
+      </div>
+      <div class="body">
+        <div class="name">${p.name}</div>
+        <div class="meta">
+          <span class="category">${p.category}</span>
+          <span class="price">${typeof p.price === 'number' ? p.price.toLocaleString('ru-RU') + ' ₽' : (p.price || '')}</span>
+        </div>
+        ${renderTagBadges(p)}
+      </div>
+    </a>
+  `).join('');
+}
+
+async function refineSearch(text) {
+  if (!text.trim() || !lastQueryVec) return;
+  const textInputs = tokenizer([text], { padding: true, truncation: true });
+  const { text_embeds } = await textModel(textInputs);
+  const v = Array.from(text_embeds.data);
+  const n = Math.sqrt(v.reduce((s, x) => s + x * x, 0));
+  lastTextVec = v.map(x => x / n);
+  rerank();
+}
+
+$('refineBtn').addEventListener('click', () => refineSearch($('refineInput').value));
+$('refineInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') refineSearch($('refineInput').value); });
+
+window.reset = () => {
+  queryPreview.classList.remove('show');
+  results.innerHTML = '';
+  fileInput.value = '';
+  lastQueryVec = null;
+  lastTextVec = null;
+  activeTags = {};
+  $('tagFilters').classList.remove('show');
+  $('tagFilters').innerHTML = '';
+  $('refineRow').classList.remove('show');
+  $('refineInput').value = '';
+};
+
+uploader.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => e.target.files[0] && search(e.target.files[0]));
+['dragenter', 'dragover'].forEach(ev =>
+  uploader.addEventListener(ev, (e) => { e.preventDefault(); uploader.classList.add('drag'); })
+);
+['dragleave', 'drop'].forEach(ev =>
+  uploader.addEventListener(ev, (e) => { e.preventDefault(); uploader.classList.remove('drag'); })
+);
+uploader.addEventListener('drop', (e) => {
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) search(f);
+});
+
+// Лайтбокс: клик по превью увеличивает фото, клик по фону или Esc закрывает
+const lightbox = $('lightbox'), lightboxImg = $('lightboxImg');
+queryImg.addEventListener('click', () => {
+  if (!queryImg.src) return;
+  lightboxImg.src = queryImg.src;
+  lightbox.classList.add('show');
+});
+lightbox.addEventListener('click', () => lightbox.classList.remove('show'));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') lightbox.classList.remove('show');
+});
+
+readyPromise = init();
+</script>
+</body>
+</html>
